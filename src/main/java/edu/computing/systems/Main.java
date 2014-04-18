@@ -2,6 +2,14 @@ package edu.computing.systems;
 
 public class Main {
 
+
+    public static void main(String[] args) {
+        AlgorithmRepresentation algorithmRepresentation = new AlgorithmRepresentation();
+        setVersion18(algorithmRepresentation);
+        algorithmRepresentation.printSequenceMatrix();
+        algorithmRepresentation.printExtendedSequenceMatrix();
+    }
+
     private static void setVersion18(AlgorithmRepresentation algorithm) {
         // настройка матрицы следования
         algorithm.setSequenceMatrixValue(4, 1, "1")
@@ -105,13 +113,6 @@ public class Main {
                 .setExtendedSequenceMatrixWeightValue(28, 5)
                 .setExtendedSequenceMatrixWeightValue(29, 4)
                 .setExtendedSequenceMatrixWeightValue(30, 3);
-    }
-
-    public static void main(String[] args) {
-        AlgorithmRepresentation algorithmRepresentation = new AlgorithmRepresentation();
-        setVersion18(algorithmRepresentation);
-        algorithmRepresentation.printSequenceMatrix();
-        algorithmRepresentation.printExtendedSequenceMatrix();
     }
 
 }

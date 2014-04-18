@@ -7,6 +7,9 @@ public class AlgorithmRepresentation {
     private String[][] sequenceMatrix;      // матрица следования
     private int[][] extendedSequenceMatrix; // расширенная матрица следования (с весами)
 
+    private boolean[] initialVertexArray;   // массив начальных вершин для каждой итерации
+    private boolean[] deletedVertexArray;   // массив вершин исклченных из рассмотрения
+
     public AlgorithmRepresentation() {
         sequenceMatrix = new String[nodeAmount][nodeAmount];
         for (int i=0; i<nodeAmount; i++) {
@@ -21,11 +24,52 @@ public class AlgorithmRepresentation {
                 extendedSequenceMatrix[i][j] = 0;
             }
         }
+
+        initialVertexArray = new boolean[nodeAmount];
+        for (int i=0; i<nodeAmount; i++) {
+            initialVertexArray[i] = false;
+        }
+        deletedVertexArray = new boolean[nodeAmount];
+        for (int i=0; i<nodeAmount; i++) {
+            deletedVertexArray[i] = false;
+        }
     }
 
-    /*
-    значения i и j вводятся начиная с 1, а не с 0
-    функция это учитывает
+    /**
+     * Функция проверяет, является ли граф пустым
+     * Попутно определяется массив начальных вершин,
+     * т.е. тех, у которых нет свёрток (входящих дуг)
+     *
+     * @return есть ли еще вершины, с которыми можно работать,
+     * т.е. не были ли они помещены в массив "удалённых" вершин
+     */
+    private boolean isGraphEmpty() {
+        boolean isNotEmpty = false;
+        for (int i=0; i<nodeAmount; i++) {
+            // convolution - свёртка
+            boolean hasNoConvolution = true;
+            for (int j=0; j<nodeAmount; j++) {
+                if (extendedSequenceMatrix[i][j] != 0)
+                    hasNoConvolution = false;
+                if (hasNoConvolution && !deletedVertexArray[i]) {
+                    initialVertexArray[i] = true;
+                    isNotEmpty = true;
+                }
+            }
+        }
+        return !isNotEmpty;
+    }
+
+
+
+
+
+
+
+
+    /**
+     * значения i и j вводятся начиная с 1, а не с 0
+     * функция это учитывает
      */
     public AlgorithmRepresentation setSequenceMatrixValue(int i, int j, String value) {
         assert i > 0 : "Значение должно быть положительно";
@@ -36,9 +80,9 @@ public class AlgorithmRepresentation {
         return this;
     }
 
-    /*
-    значения i и j вводятся начиная с 1, а не с 0
-    функция это учитывает
+    /**
+     * значения i и j вводятся начиная с 1, а не с 0
+     * функция это учитывает
      */
     public AlgorithmRepresentation setExtendedSequenceMatrixTransitionValue(int i, int j, int value) {
         assert i > 0 : "Значение должно быть положительно";
@@ -49,9 +93,9 @@ public class AlgorithmRepresentation {
         return this;
     }
 
-    /*
-    значение nodeNumber вводится начиная с 1, а не с 0
-    функция это учитывает
+    /**
+     * значение nodeNumber вводится начиная с 1, а не с 0
+     * функция это учитывает
      */
     public AlgorithmRepresentation setExtendedSequenceMatrixWeightValue(int nodeNumber, int value) {
         assert nodeNumber > 0 : "Значение должно быть положительно";
