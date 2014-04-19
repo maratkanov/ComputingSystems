@@ -8,6 +8,8 @@ public class Main {
         setVersion18(algorithmRepresentation);
         algorithmRepresentation.printSequenceMatrix();
         algorithmRepresentation.printExtendedSequenceMatrix();
+
+        algorithmRepresentation.computeThreads();
     }
 
     private static void setVersion18(AlgorithmRepresentation algorithm) {
@@ -45,7 +47,7 @@ public class Main {
                 .setSequenceMatrixValue(28, 21, "1")
                 .setSequenceMatrixValue(29, 23, "23T")
                 .setSequenceMatrixValue(30, 23, "23F")
-                .setSequenceMatrixValue(30, 24, "24T");
+                .setSequenceMatrixValue(30, 24, "24T.");    // последнее значение должно заканчиваться точкой
 
         // настройка расширенной матрицы следования
         algorithm.setExtendedSequenceMatrixTransitionValue(4, 1, 7)
