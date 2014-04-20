@@ -16,7 +16,7 @@ public class AlgorithmRepresentation {
     private boolean[] deletedVertexArray;   // массив вершин исклченных из рассмотрения
 
     private int threadAmount;
-    private List<List<Operation>> threadы;
+    private List<List<Operation>> threads;
 
     private int[] startTimeThread;
     private int[] endTimeThread;
@@ -46,7 +46,7 @@ public class AlgorithmRepresentation {
         }
 
         threadAmount = 0;
-        threadы = new ArrayList<List<Operation>>(NODE_AMOUNT);  // элементов будет не более NODE_AMOUNT
+        threads = new ArrayList<List<Operation>>(NODE_AMOUNT);  // элементов будет не более NODE_AMOUNT
 
         startTimeThread = new int[NODE_AMOUNT];
         endTimeThread = new int[NODE_AMOUNT];
@@ -165,7 +165,7 @@ public class AlgorithmRepresentation {
      */
     private int getOperationWeight(int operationNumber) {
         for (int i=0; i< NODE_AMOUNT; i++) {
-            List<Operation> thread = threadы.get(i);
+            List<Operation> thread = threads.get(i);
             if (thread != null) {
                 for (Operation operation : thread) {
                     if (operation.operationNumber == operationNumber)
@@ -192,8 +192,8 @@ public class AlgorithmRepresentation {
                     boolean delfol = true;  // TODO: change variable name
                     deletedVertexArray[i] = true;
                     initialVertexArray[i] = false;
-                    threadы.add(new ArrayList<Operation>());
-                    threadы.get(threadAmount).add(new Operation(i, extendedSequenceMatrixCopy[i][NODE_AMOUNT]));
+                    threads.add(new ArrayList<Operation>());
+                    threads.get(threadAmount).add(new Operation(i, extendedSequenceMatrixCopy[i][NODE_AMOUNT]));
                     int nextNode;
                     int previousNode = i;
                     do {
@@ -209,7 +209,7 @@ public class AlgorithmRepresentation {
                                     extendedSequenceMatrixCopy[j][NODE_AMOUNT] += extendedSequenceMatrixCopy[previousNode][j];
                                     extendedSequenceMatrixCopy[previousNode][j] = 0;
                                 } else {
-                                    if (isOperationInTheThread(threadы.get(threadAmount), j)) {
+                                    if (isOperationInTheThread(threads.get(threadAmount), j)) {
                                         extendedSequenceMatrixCopy[j][NODE_AMOUNT] += extendedSequenceMatrixCopy[previousNode][j];
                                         extendedSequenceMatrixCopy[previousNode][j] = 0;
                                     }
@@ -218,11 +218,11 @@ public class AlgorithmRepresentation {
                             }
                         }
                         if (nextNode >= 0) {
-                            threadы.get(threadAmount).add(new Operation(nextNode, extendedSequenceMatrixCopy[nextNode][NODE_AMOUNT]));
+                            threads.get(threadAmount).add(new Operation(nextNode, extendedSequenceMatrixCopy[nextNode][NODE_AMOUNT]));
                             deletedVertexArray[nextNode] = true;
                             previousNode = nextNode;
                         } else {
-                            List<Operation> currentThread = threadы.get(threadAmount);
+                            List<Operation> currentThread = threads.get(threadAmount);
                             currentThread.get(currentThread.size() - 1).isFinal = true; // доступ к последнему элементу
                             threadAmount++;
                             delfol = true;
@@ -249,7 +249,7 @@ public class AlgorithmRepresentation {
     private void printThreads() {
         System.out.println("Нити:");
         for (int i=0; i<threadAmount; i++) {
-            List<Operation> thread = threadы.get(i);
+            List<Operation> thread = threads.get(i);
             for (Operation operation : thread) {
                 System.out.print(fixedLengthString(operation.operationNumber+1 + "," + operation.operationWeight + " ", STRING_LENGTH));
             }
