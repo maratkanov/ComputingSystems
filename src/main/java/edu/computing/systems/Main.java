@@ -15,20 +15,21 @@ public class Main {
 
     private static void setVersion18(AlgorithmRepresentation algorithm) {
         // настройка матрицы следования
+        // если у элемента есть свёртка по ИЛИ, то нужно добавить точку в конце
         algorithm.setSequenceMatrixValue(4, 1, "1")
                 .setSequenceMatrixValue(5, 1, "1")
                 .setSequenceMatrixValue(6, 1, "1")
                 .setSequenceMatrixValue(7, 1, "1")
                 .setSequenceMatrixValue(8, 2, "2T")
-                .setSequenceMatrixValue(9, 2, "2F")
-                .setSequenceMatrixValue(9, 3, "3T")
+                .setSequenceMatrixValue(9, 2, "2F.")
+                .setSequenceMatrixValue(9, 3, "3T.")
                 .setSequenceMatrixValue(10, 3, "3F")
-                .setSequenceMatrixValue(11, 4, "4T")
-                .setSequenceMatrixValue(11, 5, "5T")
+                .setSequenceMatrixValue(11, 4, "4T.")
+                .setSequenceMatrixValue(11, 5, "5T.")
                 .setSequenceMatrixValue(12, 6, "1")
                 .setSequenceMatrixValue(12, 7, "1")
-                .setSequenceMatrixValue(13, 8, "8T")
-                .setSequenceMatrixValue(13, 9, "9T")
+                .setSequenceMatrixValue(13, 8, "8T.")
+                .setSequenceMatrixValue(13, 9, "9T.")
                 .setSequenceMatrixValue(14, 10, "1")
                 .setSequenceMatrixValue(15, 11, "1")
                 .setSequenceMatrixValue(16, 11, "1")
@@ -47,8 +48,8 @@ public class Main {
                 .setSequenceMatrixValue(27, 21, "1")
                 .setSequenceMatrixValue(28, 21, "1")
                 .setSequenceMatrixValue(29, 23, "23T")
-                .setSequenceMatrixValue(30, 23, "23F")
-                .setSequenceMatrixValue(30, 24, "24T.");    // последнее значение должно заканчиваться точкой
+                .setSequenceMatrixValue(30, 23, "23F.")
+                .setSequenceMatrixValue(30, 24, "24T.");
 
         // настройка расширенной матрицы следования
         algorithm.setExtendedSequenceMatrixTransitionValue(4, 1, 7)
@@ -119,6 +120,7 @@ public class Main {
     }
 
     private static void setVersion4(AlgorithmRepresentation algorithm) {
+        // если у элемента есть свёртка по ИЛИ, то нужно добавить точку в конце
         algorithm.setSequenceMatrixValue(2, 1, "1T")
                  .setSequenceMatrixValue(3, 1, "1F")
                  .setSequenceMatrixValue(5, 2, "1")

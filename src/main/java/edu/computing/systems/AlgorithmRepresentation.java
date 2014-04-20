@@ -189,7 +189,7 @@ public class AlgorithmRepresentation {
         while (!isGraphEmpty()) {
             for (int i=0; i< NODE_AMOUNT; i++) {
                 if (initialVertexArray[i]) {
-                    boolean delfol = true;  // TODO: change variable name
+                    boolean hasConvolution = false;
                     deletedVertexArray[i] = true;
                     initialVertexArray[i] = false;
                     threads.add(new ArrayList<Operation>());
@@ -203,17 +203,17 @@ public class AlgorithmRepresentation {
                                 extendedSequenceMatrixCopy[j][NODE_AMOUNT] += extendedSequenceMatrixCopy[j][previousNode];
                                 extendedSequenceMatrixCopy[j][previousNode] = 0;
                             }
-                            if (extendedSequenceMatrixCopy[previousNode][j] != 0 && j!= nextNode && delfol) {
-                                // свёртка по исключающему ИЛИ
+                            if (extendedSequenceMatrixCopy[previousNode][j] != 0 && j!= nextNode && !hasConvolution) {
                                 if (!sequenceMatrix[previousNode][j].contains(".")) {
                                     extendedSequenceMatrixCopy[j][NODE_AMOUNT] += extendedSequenceMatrixCopy[previousNode][j];
                                     extendedSequenceMatrixCopy[previousNode][j] = 0;
                                 } else {
+                                    // свёртка по исключающему ИЛИ
                                     if (isOperationInTheThread(threads.get(threadAmount), j)) {
                                         extendedSequenceMatrixCopy[j][NODE_AMOUNT] += extendedSequenceMatrixCopy[previousNode][j];
                                         extendedSequenceMatrixCopy[previousNode][j] = 0;
                                     }
-                                    delfol = false;
+                                    hasConvolution = true;
                                 }
                             }
                         }
@@ -223,9 +223,9 @@ public class AlgorithmRepresentation {
                             previousNode = nextNode;
                         } else {
                             List<Operation> currentThread = threads.get(threadAmount);
-                            currentThread.get(currentThread.size() - 1).isFinal = true; // доступ к последнему элементу
+                            currentThread.get(currentThread.size() - 1).isFinal = true; // последний элемент - финальный
                             threadAmount++;
-                            delfol = true;
+                            hasConvolution = false;
                         }
                     }
                     while (nextNode >= 0);
