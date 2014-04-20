@@ -1,8 +1,12 @@
 package edu.computing.systems;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class AlgorithmRepresentation {
 
-    public static final int nodeAmount = 30;    // узлы вычислительной сети
+    public static final int NODE_AMOUNT = 30;    // узлы вычислительной сети
+    private static final int STRING_LENGTH = 5;   // длина строки для формирования таблиц
 
     private String[][] sequenceMatrix;      // матрица следования
     private int[][] extendedSequenceMatrix; // расширенная матрица следования (с весами)
@@ -12,40 +16,82 @@ public class AlgorithmRepresentation {
     private boolean[] deletedVertexArray;   // массив вершин исклченных из рассмотрения
 
     private int threadAmount;
-    private String[] threadArray;
+    private List<List<Operation>> threadы;
+
+    private int[] startTimeThread;
+    private int[] endTimeThread;
 
     public AlgorithmRepresentation() {
-        sequenceMatrix = new String[nodeAmount][nodeAmount];
-        for (int i=0; i<nodeAmount; i++) {
-            for (int j=0; j<nodeAmount; j++) {
+        sequenceMatrix = new String[NODE_AMOUNT][NODE_AMOUNT];
+        for (int i=0; i< NODE_AMOUNT; i++) {
+            for (int j=0; j< NODE_AMOUNT; j++) {
                 sequenceMatrix[i][j] = "0";
             }
         }
         // в последнем столбце дополнительно представлены веса
-        extendedSequenceMatrix = new int[nodeAmount][nodeAmount+1];
-        for (int i=0; i<nodeAmount; i++) {
-            for (int j=0; j<nodeAmount+1; j++) {
+        extendedSequenceMatrix = new int[NODE_AMOUNT][NODE_AMOUNT +1];
+        for (int i=0; i< NODE_AMOUNT; i++) {
+            for (int j=0; j< NODE_AMOUNT +1; j++) {
                 extendedSequenceMatrix[i][j] = 0;
             }
         }
 
-        initialVertexArray = new boolean[nodeAmount];
-        for (int i=0; i<nodeAmount; i++) {
+        initialVertexArray = new boolean[NODE_AMOUNT];
+        for (int i=0; i< NODE_AMOUNT; i++) {
             initialVertexArray[i] = false;
         }
-        deletedVertexArray = new boolean[nodeAmount];
-        for (int i=0; i<nodeAmount; i++) {
+        deletedVertexArray = new boolean[NODE_AMOUNT];
+        for (int i=0; i< NODE_AMOUNT; i++) {
             deletedVertexArray[i] = false;
         }
 
         threadAmount = 0;
-        threadArray = new String[nodeAmount];   // элементов будет не более nodeAmount
+        threadы = new ArrayList<List<Operation>>(NODE_AMOUNT);  // элементов будет не более NODE_AMOUNT
+
+        startTimeThread = new int[NODE_AMOUNT];
+        endTimeThread = new int[NODE_AMOUNT];
     }
 
+    private class Operation {
+        public int operationNumber;
+        public int operationWeight;
+        public boolean isFinal;
+
+        private Operation(int operationNumber, int operationWeight) {
+            this.operationNumber = operationNumber;
+            this.operationWeight = operationWeight;
+            this.isFinal = false;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+
+            Operation operation = (Operation) o;
+
+            if (operationWeight != operation.operationWeight) return false;
+            if (operationNumber != operation.operationNumber) return false;
+
+            return true;
+        }
+
+        @Override
+        public int hashCode() {
+            int result = operationNumber;
+            result = 31 * result + operationWeight;
+            return result;
+        }
+    }
+
+    /**
+     * Функция создаёт копию копию массива
+     * @return копию массива
+     */
     private int[][] getExtendedSequenceMatrixCopy() {
-        int[][] copy = new int[nodeAmount][nodeAmount+1];
-        for (int i=0; i<nodeAmount; i++)
-            System.arraycopy(extendedSequenceMatrix[i], 0, copy[i], 0, nodeAmount + 1);
+        int[][] copy = new int[NODE_AMOUNT][NODE_AMOUNT +1];
+        for (int i=0; i< NODE_AMOUNT; i++)
+            System.arraycopy(extendedSequenceMatrix[i], 0, copy[i], 0, NODE_AMOUNT + 1);
         return copy;
     }
 
@@ -59,16 +105,16 @@ public class AlgorithmRepresentation {
      */
     private boolean isGraphEmpty() {
         boolean isNotEmpty = false;
-        for (int i=0; i<nodeAmount; i++) {
+        for (int i=0; i< NODE_AMOUNT; i++) {
             // convolution - свёртка
             boolean hasNoConvolution = true;
-            for (int j=0; j<nodeAmount; j++) {
-                if (extendedSequenceMatrix[i][j] != 0)
+            for (int j=0; j< NODE_AMOUNT; j++) {
+                if (extendedSequenceMatrixCopy[i][j] != 0)
                     hasNoConvolution = false;
-                if (hasNoConvolution && !deletedVertexArray[i]) {
-                    initialVertexArray[i] = true;
-                    isNotEmpty = true;
-                }
+            }
+            if (hasNoConvolution && !deletedVertexArray[i]) {
+                initialVertexArray[i] = true;
+                isNotEmpty = true;
             }
         }
         return !isNotEmpty;
@@ -77,46 +123,94 @@ public class AlgorithmRepresentation {
     /**
      * Функция возвращает следующий доступный узел
      */
-    private int getNextNode(int currentNode) {
+    private int getNextNode(int previousNode) {
         int nextNode = -1;  // TODO: check here equals 0
         int maxTransitionWeight = 0;
-        for (int i=0; i<nodeAmount; i++) {
-            if (extendedSequenceMatrixCopy[i][currentNode] > maxTransitionWeight) {
-                maxTransitionWeight = extendedSequenceMatrixCopy[i][currentNode];
+        for (int i=0; i< NODE_AMOUNT; i++) {
+            if (extendedSequenceMatrixCopy[i][previousNode] > maxTransitionWeight) {
+                maxTransitionWeight = extendedSequenceMatrixCopy[i][previousNode];
                 nextNode = i;
             }
         }
         return nextNode;
     }
 
+    /**
+     * Функция рассчитывает времена начала и конца для каждой нити
+     * Заодно производится оптимизация
+     */
+    private void calculateThreadTime() {
+        for (int nodeNumber=0; nodeNumber< NODE_AMOUNT; nodeNumber++) {
+            int endTime = getOperationWeight(nodeNumber);
+            boolean isStarted = true;
+            int time = 0;
+            for (int i=0; i< NODE_AMOUNT; i++) {
+                if (extendedSequenceMatrix[nodeNumber][i] != 0 && endTimeThread[i] > time) {
+                    time = endTimeThread[i];
+                    isStarted = false;
+                }
+            }
+            if (!isStarted) {
+                startTimeThread[nodeNumber] = time;
+                endTime += time;
+            }
+            endTimeThread[nodeNumber] = endTime;
+        }
+    }
+
+    /**
+     *
+     * @param operationNumber - номер операции, для которой ищется вес
+     * @return вес текущей операции в одной из нитей или 0, если операция не найдена
+     */
+    private int getOperationWeight(int operationNumber) {
+        for (int i=0; i< NODE_AMOUNT; i++) {
+            List<Operation> thread = threadы.get(i);
+            if (thread != null) {
+                for (Operation operation : thread) {
+                    if (operation.operationNumber == operationNumber)
+                        return operation.operationWeight;
+                }
+            }
+        }
+        return 0;
+    }
+
+    private boolean isOperationInTheThread(List<Operation> thread, int operationNumber) {
+        for (Operation operation : thread) {
+            if (operation.operationNumber == operationNumber)
+                return true;
+        }
+        return false;
+    }
+
     public void computeThreads() {
-        int stringLengthSize = 6;
         extendedSequenceMatrixCopy = getExtendedSequenceMatrixCopy();
-        boolean delfol = true;  // TODO: change variable name
         while (!isGraphEmpty()) {
-            for (int i=0; i<nodeAmount; i++) {
+            for (int i=0; i< NODE_AMOUNT; i++) {
                 if (initialVertexArray[i]) {
+                    boolean delfol = true;  // TODO: change variable name
                     deletedVertexArray[i] = true;
                     initialVertexArray[i] = false;
-                    threadArray[threadAmount] = fixedLengthString(String.valueOf(i+1) + "," + String.valueOf(extendedSequenceMatrixCopy[i][nodeAmount]), stringLengthSize);
-                    // TODO: check String.valueOf(i+1) !!!
+                    threadы.add(new ArrayList<Operation>());
+                    threadы.get(threadAmount).add(new Operation(i, extendedSequenceMatrixCopy[i][NODE_AMOUNT]));
                     int nextNode;
                     int previousNode = i;
                     do {
                         nextNode = getNextNode(previousNode);
-                        for (int j=0; j<nodeAmount; j++) {
+                        for (int j=0; j< NODE_AMOUNT; j++) {
                             if (extendedSequenceMatrixCopy[j][previousNode] != 0 && j != nextNode) {
-                                extendedSequenceMatrixCopy[j][nodeAmount] += extendedSequenceMatrixCopy[j][previousNode];
+                                extendedSequenceMatrixCopy[j][NODE_AMOUNT] += extendedSequenceMatrixCopy[j][previousNode];
                                 extendedSequenceMatrixCopy[j][previousNode] = 0;
                             }
                             if (extendedSequenceMatrixCopy[previousNode][j] != 0 && j!= nextNode && delfol) {
-                                // последнее значение должно заканчиваться точкой
-                                if (sequenceMatrix[previousNode][j].contains(".")) {
-                                    extendedSequenceMatrixCopy[j][nodeAmount] += extendedSequenceMatrixCopy[previousNode][j];
+                                // свёртка по исключающему ИЛИ
+                                if (!sequenceMatrix[previousNode][j].contains(".")) {
+                                    extendedSequenceMatrixCopy[j][NODE_AMOUNT] += extendedSequenceMatrixCopy[previousNode][j];
                                     extendedSequenceMatrixCopy[previousNode][j] = 0;
                                 } else {
-                                    if (threadArray[threadAmount].contains(String.valueOf(j))) {
-                                        extendedSequenceMatrixCopy[j][nodeAmount] += extendedSequenceMatrixCopy[previousNode][j];
+                                    if (isOperationInTheThread(threadы.get(threadAmount), j)) {
+                                        extendedSequenceMatrixCopy[j][NODE_AMOUNT] += extendedSequenceMatrixCopy[previousNode][j];
                                         extendedSequenceMatrixCopy[previousNode][j] = 0;
                                     }
                                     delfol = false;
@@ -124,13 +218,12 @@ public class AlgorithmRepresentation {
                             }
                         }
                         if (nextNode >= 0) {
-                            threadArray[threadAmount] += fixedLengthString(String.valueOf(nextNode+1) + "," + String.valueOf(extendedSequenceMatrixCopy[nextNode][nodeAmount]), stringLengthSize);
-                            // TODO: String.valueOf(nextNode + 1)
+                            threadы.get(threadAmount).add(new Operation(nextNode, extendedSequenceMatrixCopy[nextNode][NODE_AMOUNT]));
                             deletedVertexArray[nextNode] = true;
                             previousNode = nextNode;
                         } else {
-                            threadArray[threadAmount] += fixedLengthString("E" + String.valueOf(previousNode+1) + "X", stringLengthSize);
-                            // TODO: String.valueOf(previousNode + 1)
+                            List<Operation> currentThread = threadы.get(threadAmount);
+                            currentThread.get(currentThread.size() - 1).isFinal = true; // доступ к последнему элементу
                             threadAmount++;
                             delfol = true;
                         }
@@ -139,16 +232,30 @@ public class AlgorithmRepresentation {
                 }
             }
         }
+
+        // TODO: from here
+
         System.out.println("DONE");
-        for (int i=0; i<threadAmount; i++)
-            System.out.println(threadArray[i]);
+        printThreads();
     }
 
 
-
-
-
-
+    /**
+     * Печать на каждой строке очередной нити в формате
+     * [номер операции],[вес]
+     *
+     * если операция i, то выводится i+1 для удобного восприятия
+     */
+    private void printThreads() {
+        System.out.println("Нити:");
+        for (int i=0; i<threadAmount; i++) {
+            List<Operation> thread = threadы.get(i);
+            for (Operation operation : thread) {
+                System.out.print(fixedLengthString(operation.operationNumber+1 + "," + operation.operationWeight + " ", STRING_LENGTH));
+            }
+            System.out.println();
+        }
+    }
 
 
     /**
@@ -158,8 +265,8 @@ public class AlgorithmRepresentation {
     public AlgorithmRepresentation setSequenceMatrixValue(int i, int j, String value) {
         assert i > 0 : "Значение должно быть положительно";
         assert j > 0 : "Значение должно быть положительно";
-        assert i <= nodeAmount : "Значение не должно превышать " + String.valueOf(nodeAmount);
-        assert j <= nodeAmount : "Значение не должно превышать " + String.valueOf(nodeAmount);
+        assert i <= NODE_AMOUNT : "Значение не должно превышать " + String.valueOf(NODE_AMOUNT);
+        assert j <= NODE_AMOUNT : "Значение не должно превышать " + String.valueOf(NODE_AMOUNT);
         sequenceMatrix[i-1][j-1] = value;
         return this;
     }
@@ -171,8 +278,8 @@ public class AlgorithmRepresentation {
     public AlgorithmRepresentation setExtendedSequenceMatrixTransitionValue(int i, int j, int value) {
         assert i > 0 : "Значение должно быть положительно";
         assert j > 0 : "Значение должно быть положительно";
-        assert i <= nodeAmount : "Значение не должно превышать " + String.valueOf(nodeAmount);
-        assert j <= nodeAmount : "Значение не должно превышать " + String.valueOf(nodeAmount);
+        assert i <= NODE_AMOUNT : "Значение не должно превышать " + String.valueOf(NODE_AMOUNT);
+        assert j <= NODE_AMOUNT : "Значение не должно превышать " + String.valueOf(NODE_AMOUNT);
         extendedSequenceMatrix[i-1][j-1] = value;
         return this;
     }
@@ -183,8 +290,8 @@ public class AlgorithmRepresentation {
      */
     public AlgorithmRepresentation setExtendedSequenceMatrixWeightValue(int nodeNumber, int value) {
         assert nodeNumber > 0 : "Значение должно быть положительно";
-        assert nodeNumber < nodeAmount : "Значение не должно превышать " + String.valueOf(nodeAmount);
-        extendedSequenceMatrix[nodeNumber-1][nodeAmount] = value;
+        assert nodeNumber < NODE_AMOUNT : "Значение не должно превышать " + String.valueOf(NODE_AMOUNT);
+        extendedSequenceMatrix[nodeNumber-1][NODE_AMOUNT] = value;
         return this;
     }
 
@@ -193,20 +300,19 @@ public class AlgorithmRepresentation {
     }
 
     public void printSequenceMatrix() {
-        int stringLength = 4;
         System.out.println("Матрица следования:");
 
         // шапка
-        System.out.print(fixedLengthString(" ", stringLength));
-        for (int i=0; i<nodeAmount; i++) {
-            System.out.print(fixedLengthString(String.valueOf(i+1), stringLength));
+        System.out.print(fixedLengthString(" ", STRING_LENGTH));
+        for (int i=0; i< NODE_AMOUNT; i++) {
+            System.out.print(fixedLengthString(String.valueOf(i+1), STRING_LENGTH));
         }
         System.out.println();
 
-        for (int i=0; i<nodeAmount; i++) {
-            System.out.print(fixedLengthString(String.valueOf(i+1), stringLength));
-            for (int j=0; j<nodeAmount; j++) {
-                System.out.print(fixedLengthString(sequenceMatrix[i][j], stringLength));
+        for (int i=0; i< NODE_AMOUNT; i++) {
+            System.out.print(fixedLengthString(String.valueOf(i+1), STRING_LENGTH));
+            for (int j=0; j< NODE_AMOUNT; j++) {
+                System.out.print(fixedLengthString(sequenceMatrix[i][j], STRING_LENGTH));
             }
             System.out.println();
         }
@@ -214,20 +320,19 @@ public class AlgorithmRepresentation {
 
 
     public void printExtendedSequenceMatrix() {
-        int stringLength = 4;
         System.out.println("Расширенная Матрица следования:");
 
         // шапка
-        System.out.print(fixedLengthString(" ", stringLength));
-        for (int i=0; i<nodeAmount; i++) {
-            System.out.print(fixedLengthString(String.valueOf(i+1), stringLength));
+        System.out.print(fixedLengthString(" ", STRING_LENGTH));
+        for (int i=0; i< NODE_AMOUNT; i++) {
+            System.out.print(fixedLengthString(String.valueOf(i+1), STRING_LENGTH));
         }
         System.out.println(" Weight");
 
-        for (int i=0; i<nodeAmount; i++) {
-            System.out.print(fixedLengthString(String.valueOf(i+1), stringLength));
-            for (int j=0; j<nodeAmount+1; j++) {
-                System.out.print(fixedLengthString(String.valueOf(extendedSequenceMatrix[i][j]), stringLength));
+        for (int i=0; i< NODE_AMOUNT; i++) {
+            System.out.print(fixedLengthString(String.valueOf(i+1), STRING_LENGTH));
+            for (int j=0; j< NODE_AMOUNT +1; j++) {
+                System.out.print(fixedLengthString(String.valueOf(extendedSequenceMatrix[i][j]), STRING_LENGTH));
             }
             System.out.println();
         }
