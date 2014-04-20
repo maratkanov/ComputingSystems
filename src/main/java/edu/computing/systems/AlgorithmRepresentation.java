@@ -5,12 +5,15 @@ import java.util.List;
 
 public class AlgorithmRepresentation {
 
-    public static final int NODE_AMOUNT = 30;    // узлы вычислительной сети
-    private static final int STRING_LENGTH = 5;   // длина строки для формирования таблиц
+    public static final int NODE_AMOUNT = 30;       // узлы вычислительной сети
+    private static final int STRING_LENGTH = 5;     // длина строки для формирования таблиц
+    private static final int TIME_AXIS_MAX_VALUE = 35; // максимальное значение по временной оси
+
 
     private String[][] sequenceMatrix;      // матрица следования
     private int[][] extendedSequenceMatrix; // расширенная матрица следования (с весами)
     private int[][] extendedSequenceMatrixCopy; // расширенная матрица следования (с весами)
+    private int[][] threadInterconnections;     // матрица взаимодействия нитей
 
     private boolean[] initialVertexArray;   // массив начальных вершин для каждой итерации
     private boolean[] deletedVertexArray;   // массив вершин исклченных из рассмотрения
@@ -18,8 +21,14 @@ public class AlgorithmRepresentation {
     private int threadAmount;
     private List<List<Operation>> threads;
 
-    private int[] startTimeThread;
-    private int[] endTimeThread;
+    private int[] startTimeOfOperationsInThread;
+    private int[] endTimeOfOperationsInThread;
+
+    private int[] threadStartTimes;
+    private int[] threadEndTimes;
+
+    private int[][] timeCharts;     // временная диаграмма исполнения нитей на процессорах
+    private int processorAmount;
 
     public AlgorithmRepresentation() {
         sequenceMatrix = new String[NODE_AMOUNT][NODE_AMOUNT];
@@ -48,19 +57,19 @@ public class AlgorithmRepresentation {
         threadAmount = 0;
         threads = new ArrayList<List<Operation>>(NODE_AMOUNT);  // элементов будет не более NODE_AMOUNT
 
-        startTimeThread = new int[NODE_AMOUNT];
-        endTimeThread = new int[NODE_AMOUNT];
+        startTimeOfOperationsInThread = new int[NODE_AMOUNT];
+        endTimeOfOperationsInThread = new int[NODE_AMOUNT];
+
+        threadInterconnections = new int[NODE_AMOUNT][NODE_AMOUNT];
     }
 
     private class Operation {
         public int operationNumber;
         public int operationWeight;
-        public boolean isFinal;
 
         private Operation(int operationNumber, int operationWeight) {
             this.operationNumber = operationNumber;
             this.operationWeight = operationWeight;
-            this.isFinal = false;
         }
 
         @Override
@@ -136,25 +145,42 @@ public class AlgorithmRepresentation {
     }
 
     /**
-     * Функция рассчитывает времена начала и конца для каждой нити
-     * Заодно производится оптимизация
+     * Функция рассчитывает времена начала и конца для каждой операции
+     * с учётом принадлежности к конкретной нити
+     *
      */
-    private void calculateThreadTime() {
-        for (int nodeNumber=0; nodeNumber< NODE_AMOUNT; nodeNumber++) {
-            int endTime = getOperationWeight(nodeNumber);
+    private void calculateTimesForOperationsInThreads() {
+        for (int operationNumber=0; operationNumber< NODE_AMOUNT; operationNumber++) {
+            int endTime = getOperationWeight(operationNumber);
             boolean isStarted = true;
             int time = 0;
             for (int i=0; i< NODE_AMOUNT; i++) {
-                if (extendedSequenceMatrix[nodeNumber][i] != 0 && endTimeThread[i] > time) {
-                    time = endTimeThread[i];
+                if (extendedSequenceMatrix[operationNumber][i] != 0 && endTimeOfOperationsInThread[i] > time) {
+                    time = endTimeOfOperationsInThread[i];
                     isStarted = false;
                 }
             }
             if (!isStarted) {
-                startTimeThread[nodeNumber] = time;
+                startTimeOfOperationsInThread[operationNumber] = time;
                 endTime += time;
             }
-            endTimeThread[nodeNumber] = endTime;
+            endTimeOfOperationsInThread[operationNumber] = endTime;
+        }
+    }
+
+    /**
+     * Функция рассчитывает времена начала и конца для каждой нити
+     */
+    private void calculateTimesForThreads() {
+        threadStartTimes = new int[threadAmount];
+        threadEndTimes = new int[threadAmount];
+
+        for (int i=0; i<threadAmount; i++) {
+            List<Operation> thread = threads.get(i);
+            int firstThreadOperation = thread.get(0).operationNumber;
+            threadStartTimes[i] = startTimeOfOperationsInThread[firstThreadOperation];
+            int lastThreadOperation = thread.get(thread.size() - 1).operationNumber;
+            threadEndTimes[i] = endTimeOfOperationsInThread[lastThreadOperation];
         }
     }
 
@@ -183,6 +209,39 @@ public class AlgorithmRepresentation {
         }
         return false;
     }
+
+    /**
+     * Функция возвращает номер нити, которой принадлежит операция operation
+     * @param operation - операция
+     * @return номер нити или -1, если не найдено
+     */
+    private int getThreadByOperation(int operation) {
+        for (int i = 0; i < threadAmount; i++) {
+            List<Operation> thread = threads.get(i);
+            for (Operation threadOperation : thread) {
+                if (threadOperation.operationNumber == operation)
+                    return i;
+            }
+        }
+        return -1;
+    }
+
+    private void arrangeThreadsOnProcessors() {
+        processorAmount = threadAmount; // TODO: create function
+        timeCharts = new int[processorAmount][TIME_AXIS_MAX_VALUE];
+        for (int time = 0; time < TIME_AXIS_MAX_VALUE; time++) {
+            for (int i = 0; i < threadAmount; i++) {
+                if (threadStartTimes[i] == time) {
+                    int j = 1;
+                    while (timeCharts[j][time+1] != 0)
+                        j++;
+                    for (int t = time+1; t < threadEndTimes[i]; t++)
+                        timeCharts[j][t] = i + 1;   // для наглядного представления на графике
+                }
+            }
+        }
+    }
+
 
     public void computeThreads() {
         extendedSequenceMatrixCopy = getExtendedSequenceMatrixCopy();
@@ -223,7 +282,6 @@ public class AlgorithmRepresentation {
                             previousNode = nextNode;
                         } else {
                             List<Operation> currentThread = threads.get(threadAmount);
-                            currentThread.get(currentThread.size() - 1).isFinal = true; // последний элемент - финальный
                             threadAmount++;
                             hasConvolution = false;
                         }
@@ -233,11 +291,38 @@ public class AlgorithmRepresentation {
             }
         }
 
-        // TODO: from here
+        calculateTimesForOperationsInThreads();
+        calculateTimesForThreads();
+
+        for (int i=0; i<threadAmount; i++) {
+            int next = threads.get(i).get(0).operationNumber;   // операция, с которой начинается нить
+            for (int j = 0; j < NODE_AMOUNT; j++) {
+                if (extendedSequenceMatrix[next][j] != 0) {
+                    int prev = getThreadByOperation(j);
+                    threadInterconnections[i][prev] = 1;
+                }
+            }
+        }
+
+
+        for (int i=0; i<threadAmount; i++) {
+            List<Operation> thread = threads.get(i);
+            int next = thread.get(thread.size() - 1).operationNumber; // операция, которой заканчивается нить
+            for (int j = 0; j < NODE_AMOUNT; j++) {
+                if (extendedSequenceMatrix[j][next] != 0) {
+                    int prev = getThreadByOperation(j);
+                    threadInterconnections[prev][i] = 1;
+                }
+            }
+        }
+        arrangeThreadsOnProcessors();
 
         System.out.println("DONE");
         printThreads();
+        printThreadInterconnectionTable();
+        printTimeCharts();
     }
+
 
 
     /**
@@ -251,12 +336,44 @@ public class AlgorithmRepresentation {
         for (int i=0; i<threadAmount; i++) {
             List<Operation> thread = threads.get(i);
             for (Operation operation : thread) {
-                System.out.print(fixedLengthString(operation.operationNumber+1 + "," + operation.operationWeight + " ", STRING_LENGTH));
+                System.out.print(fixedLengthString(operation.operationNumber + 1 + "," + operation.operationWeight + " ", STRING_LENGTH));
+            }
+            System.out.println(fixedLengthString(threadStartTimes[i] + "-" + threadEndTimes[i], 3*STRING_LENGTH));
+        }
+    }
+
+    /**
+     * Функция печати матрицы взаимодействия нитей
+     */
+    private void printThreadInterconnectionTable() {
+        System.out.println("Матрица взаимосвязей:");
+        System.out.print(fixedLengthString(" ", STRING_LENGTH));
+        for (int i = 0; i < threadAmount; i++) {
+            System.out.print(fixedLengthString(String.valueOf(i +1), STRING_LENGTH));
+        }
+        System.out.println();
+        for (int i = 0; i < threadAmount; i++) {
+            System.out.print(fixedLengthString(String.valueOf(i +1), STRING_LENGTH));
+            for (int j = 0; j < threadAmount; j++) {
+                System.out.print(fixedLengthString(String.valueOf(threadInterconnections[i][j]), STRING_LENGTH));
             }
             System.out.println();
         }
     }
 
+    /**
+     * Функция печати временной диаграммы исполнения нитей на процессорах
+     *
+     * если операция i, то выводится i+1 для удобного восприятия
+     */
+    private void printTimeCharts() {
+        for (int i = 0; i < processorAmount; i++) {
+            for (int j = 0; j < TIME_AXIS_MAX_VALUE; j++) {
+                System.out.print(fixedLengthString(String.valueOf(timeCharts[i][j]), 3));
+            }
+            System.out.println();
+        }
+    }
 
     /**
      * значения i и j вводятся начиная с 1, а не с 0
