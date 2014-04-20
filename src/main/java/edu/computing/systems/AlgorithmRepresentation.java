@@ -7,7 +7,7 @@ public class AlgorithmRepresentation {
 
     public static final int NODE_AMOUNT = 30;       // узлы вычислительной сети
     private static final int STRING_LENGTH = 5;     // длина строки для формирования таблиц
-    private static final int TIME_AXIS_MAX_VALUE = 35; // максимальное значение по временной оси
+    private static final int TIME_AXIS_MAX_VALUE = 45; // максимальное значение по временной оси
 
 
     private String[][] sequenceMatrix;      // матрица следования

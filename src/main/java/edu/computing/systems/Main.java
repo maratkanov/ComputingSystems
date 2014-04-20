@@ -5,8 +5,8 @@ public class Main {
 
     public static void main(String[] args) {
         AlgorithmRepresentation algorithmRepresentation = new AlgorithmRepresentation();
-//        setVersion18(algorithmRepresentation);
-        setVersion4(algorithmRepresentation);
+        setVersion18(algorithmRepresentation);
+//        setVersion4(algorithmRepresentation);
         algorithmRepresentation.printSequenceMatrix();
         algorithmRepresentation.printExtendedSequenceMatrix();
 
